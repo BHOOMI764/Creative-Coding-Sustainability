@@ -309,11 +309,11 @@ const LandingPage: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">📧</span>
-                  <a href="mailto:contact@creativecoding.edu" className="hover:text-blue-400">bhoomicat2005@gmail.com</a>
+                  <a href="mailto:contact@creativecoding.edu" className="hover:text-blue-400">abc@gmail.com</a>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">📱</span>
-                  <span>9869343406</span>
+                  <span>9xxxx-xxxxx</span>
                 </li>
               </ul>
             </div>

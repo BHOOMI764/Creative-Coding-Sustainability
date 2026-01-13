@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -77,6 +78,15 @@ const initializeDB = async () => {
         profileImage TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expiresAt DATETIME NOT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       );
       
       CREATE TABLE IF NOT EXISTS teams (
@@ -212,6 +222,24 @@ const initializeDB = async () => {
   }
 };
 
+// Helper to create and verify refresh tokens
+const createRefreshToken = async (userId, expiresInDays = 30) => {
+  const token = uuidv4();
+  const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+  await db.run('INSERT INTO refresh_tokens (userId, token, expiresAt) VALUES (?, ?, ?)', [userId, token, expiresAt]);
+  return token;
+};
+
+const verifyRefreshToken = async (token) => {
+  const row = await db.get('SELECT * FROM refresh_tokens WHERE token = ?', [token]);
+  if (!row) return null;
+  if (new Date(row.expiresAt) < new Date()) {
+    await db.run('DELETE FROM refresh_tokens WHERE id = ?', [row.id]);
+    return null;
+  }
+  return row;
+};
+
 // JWT Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -284,8 +312,10 @@ app.post('/api/auth/register', async (req, res) => {
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: '1d' }
     );
-    
-    res.status(201).json({ token, user });
+    // Create refresh token and return it as well
+    const refreshToken = await createRefreshToken(user.id);
+
+    res.status(201).json({ token, refreshToken, user });
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -329,10 +359,36 @@ app.post('/api/auth/login', async (req, res) => {
     const { password: _, ...userWithoutPassword } = user;
     
     console.log('Login successful for user:', userWithoutPassword);
-    
-    res.json({ token, user: userWithoutPassword });
+    // Create a refresh token for the session
+    const refreshToken = await createRefreshToken(user.id);
+
+    res.json({ token, refreshToken, user: userWithoutPassword });
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+  try {
+    if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+    const tokenRow = await verifyRefreshToken(refreshToken);
+    if (!tokenRow) return res.status(403).json({ message: 'Invalid or expired refresh token' });
+
+    // Fetch user
+    const user = await db.get('SELECT id, username, email, role FROM users WHERE id = ?', [tokenRow.userId]);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Optionally rotate refresh token: remove old, create new
+    await db.run('DELETE FROM refresh_tokens WHERE id = ?', [tokenRow.id]);
+    const newRefreshToken = await createRefreshToken(user.id);
+
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '1d' });
+
+    res.json({ token, refreshToken: newRefreshToken });
+  } catch (err) {
+    console.error('Refresh token error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
