@@ -1,7 +1,7 @@
 // API Configuration
-export const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-production-api.com' 
-  : ''; // Use proxy in development
+export const API_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:5000' : 'https://creative-coding-server.onrender.com'
+);
 
 // SDG Colors
 export const SDG_COLORS = {

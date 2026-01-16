@@ -21,7 +21,7 @@ interface RegisterFormData {
 }
 
 const RegisterPage: React.FC = () => {
-  const { register: registerAuth } = useAuth();
+  const { register: registerAuth, user } = useAuth();
   const navigate = useNavigate();
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>();
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +42,14 @@ const RegisterPage: React.FC = () => {
         lastName: data.lastName,
         role: data.role,
       });
-      toast.success('Registration successful! Please check your email for verification.');
+      toast.success('Registration successful! Redirecting to dashboard...');
+      // Navigate based on role after short delay
+      setTimeout(() => {
+        const dashboardRoute = user?.role === 'student' ? '/student-dashboard' : 
+                             user?.role === 'faculty' ? '/faculty-dashboard' : 
+                             '/viewer-dashboard';
+        navigate(dashboardRoute);
+      }, 500);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
       setServerError(errorMessage);

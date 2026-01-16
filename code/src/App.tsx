@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, AuthActionsProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -177,12 +177,11 @@ const App: React.FC = () => {
         <ThemeProvider>
           <AuthProvider>
             <Router>
-              <AuthActionsProvider>
-                <ProjectProvider>
-                  <NotificationProvider>
-                    <GamificationProvider>
-                      <AppContent />
-                      <Toaster
+              <ProjectProvider>
+                <NotificationProvider>
+                  <GamificationProvider>
+                    <AppContent />
+                    <Toaster
                         position="top-right"
                         toastOptions={{
                           duration: 4000,
@@ -209,7 +208,6 @@ const App: React.FC = () => {
                     </GamificationProvider>
                   </NotificationProvider>
                 </ProjectProvider>
-              </AuthActionsProvider>
             </Router>
           </AuthProvider>
         </ThemeProvider>

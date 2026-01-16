@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { LogIn, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -15,7 +15,8 @@ interface LoginFormData {
 }
 
 const LoginPage: React.FC = () => {
-  const { login, error } = useAuth();
+  const { login, error, user } = useAuth();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
   
@@ -27,6 +28,13 @@ const LoginPage: React.FC = () => {
         rememberMe: data.rememberMe,
       });
       toast.success('Welcome back!');
+      // Navigate based on role after short delay
+      setTimeout(() => {
+        const dashboardRoute = user?.role === 'student' ? '/student-dashboard' : 
+                             user?.role === 'faculty' ? '/faculty-dashboard' : 
+                             '/viewer-dashboard';
+        navigate(dashboardRoute);
+      }, 500);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Login failed');
     }
